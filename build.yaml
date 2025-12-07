@@ -9,10 +9,10 @@
 include:
   - board: corne_choc_pro_left
     snippet: studio-rpc-usb-uart
-    shield: nice_view
+    shield: nice_view nice_view_gem
     cmake-args: -DCONFIG_ZMK_STUDIO=y
   - board: corne_choc_pro_right
-    shield: nice_view
+    shield: nice_view nice_view_gem
     snippet: studio-rpc-usb-uart
 
   - board: corne_choc_pro_left
