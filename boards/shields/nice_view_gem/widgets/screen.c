@@ -23,6 +23,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include "output.h"
 #include "profile.h"
 #include "screen.h"
+#include "wpm.h"
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
@@ -45,6 +46,9 @@ static void draw_top(lv_obj_t *widget, lv_color_t cbuf[], const struct status_st
 static void draw_middle(lv_obj_t *widget, lv_color_t cbuf[], const struct status_state *state) {
     lv_obj_t *canvas = lv_obj_get_child(widget, 1);
     fill_background(canvas);
+
+    // Draw widgets
+    draw_wpm_status(canvas, state);
 
     // Rotate for horizontal display
     rotate_canvas(canvas, cbuf);
