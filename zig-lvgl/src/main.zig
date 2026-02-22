@@ -17,6 +17,10 @@ pub fn main() !void {
     // Initialize LVGL
     c.lv_init();
 
+    // Create a default screen BEFORE creating the SDL window
+    // This prevents the crash when SDL driver tries to refresh
+    _ = c.lv_obj_create(null);
+
     // Create SDL window display
     const disp = c.lv_sdl_window_create(480, 320);
     if (disp == null) {
@@ -30,14 +34,7 @@ pub fn main() !void {
     // Initialize keyboard input
     _ = c.lv_sdl_keyboard_create();
 
-    // Run LVGL tick to process initial setup
-    var i: usize = 0;
-    while (i < 10) : (i += 1) {
-        _ = c.lv_timer_handler();
-        c.SDL_Delay(5);
-    }
-
-    // Create a simple label
+    // Create a simple label on the active screen
     const screen = c.lv_scr_act();
     if (screen == null) {
         std.debug.print("No active screen\n", .{});
