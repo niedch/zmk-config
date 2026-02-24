@@ -128,6 +128,7 @@ ZMK_SUBSCRIPTION(widget_wpm_bongo_cat, zmk_wpm_state_changed);
 int zmk_widget_wpm_bongo_cat_init(struct zmk_widget_wpm_bongo_cat *widget, lv_obj_t *parent) {
     widget->obj = lv_animimg_create(parent);
     lv_obj_center(widget->obj);
+    lv_obj_set_size(widget->obj, 40, 40);
 
     sys_slist_append(&widgets, &widget->node);
 
