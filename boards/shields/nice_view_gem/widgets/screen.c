@@ -213,6 +213,9 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
 
     zmk_widget_wpm_bongo_cat_init(&bongo_cat_widget, widget->obj);
 
+    struct wpm_bongo_cat_status_state initial_state = {.wpm = zmk_wpm_get_state()};
+    wpm_bongo_cat_status_update_cb(initial_state);
+
     lv_obj_t *middle = lv_canvas_create(widget->obj);
     lv_obj_align(middle, LV_ALIGN_TOP_RIGHT, BUFFER_OFFSET_MIDDLE, 0);
     lv_canvas_set_buffer(middle, widget->cbuf2, BUFFER_SIZE, BUFFER_SIZE, LV_IMG_CF_TRUE_COLOR);
