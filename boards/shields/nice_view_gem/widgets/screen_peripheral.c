@@ -8,6 +8,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/split/bluetooth/peripheral.h>
 #include <zmk/events/split_peripheral_status_changed.h>
+#include <zmk/events/keycode_state_changed.h>
 #include <zmk/battery.h>
 #include <zmk/ble.h>
 #include <zmk/display.h>
@@ -100,8 +101,80 @@ ZMK_DISPLAY_WIDGET_LISTENER(widget_peripheral_status, struct peripheral_status_s
 ZMK_SUBSCRIPTION(widget_peripheral_status, zmk_split_peripheral_status_changed);
 
 /**
- * Initialization
+ * WPM tracking
  **/
+
+#define WPM_WINDOW_SIZE 100
+#define WPM_WINDOW_MS 5000
+
+static uint32_t wpm_timestamps[WPM_WINDOW_SIZE];
+static int wpm_head = 0;
+static int wpm_count = 0;
+
+static uint32_t current_wpm = 0;
+
+static void update_wpm() {
+    uint32_t now = k_uptime_get_32();
+    uint32_t cutoff = now - WPM_WINDOW_MS;
+    
+    // Remove timestamps older than window
+    while (wpm_count > 0) {
+        int tail = (wpm_head - wpm_count + WPM_WINDOW_SIZE) % WPM_WINDOW_SIZE;
+        if (wpm_timestamps[tail] >= cutoff) {
+            break;
+        }
+        wpm_count--;
+    }
+    
+    // Calculate WPM
+    if (wpm_count > 0) {
+        // WPM = (characters / 5) / (time_seconds / 60)
+        // We approximate with window size
+        current_wpm = (wpm_count * 60 * 1000) / (WPM_WINDOW_MS * 5);
+        if (current_wpm > 255) current_wpm = 255;
+    } else {
+        current_wpm = 0;
+    }
+    
+    // Update animation speed
+    update_animation_speed(current_wpm);
+    
+    // Update widget states
+    struct zmk_widget_screen *widget;
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
+        widget->state.wpm = current_wpm;
+    }
+}
+
+static void record_keypress() {
+    uint32_t now = k_uptime_get_32();
+    wpm_timestamps[wpm_head] = now;
+    wpm_head = (wpm_head + 1) % WPM_WINDOW_SIZE;
+    if (wpm_count < WPM_WINDOW_SIZE) {
+        wpm_count++;
+    }
+    update_wpm();
+}
+
+// Define the keycode_status_state struct
+struct keycode_status_state {
+    bool pressed;
+};
+
+static void keycode_status_update_cb(struct keycode_status_state state) {
+    if (state.pressed) {
+        record_keypress();
+    }
+}
+
+static struct keycode_status_state keycode_get_state(const zmk_event_t *eh) {
+    struct zmk_keycode_state_changed *ev = as_zmk_keycode_state_changed(eh);
+    return (struct keycode_status_state){ .pressed = ev->pressed };
+}
+
+ZMK_DISPLAY_WIDGET_LISTENER(widget_keycode_status, struct keycode_status_state,
+                            keycode_status_update_cb, keycode_get_state)
+ZMK_SUBSCRIPTION(widget_keycode_status, zmk_keycode_state_changed);
 
 int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     widget->obj = lv_obj_create(parent);
@@ -116,6 +189,7 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     sys_slist_append(&widgets, &widget->node);
     widget_battery_status_init();
     widget_peripheral_status_init();
+    widget_keycode_status_init();
 
     return 0;
 }
